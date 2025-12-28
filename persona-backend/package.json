@@ -1,0 +1,19 @@
+{
+  "name": "persona-backend",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "node src/server.js"
+  },
+  "dependencies": {
+    "@react-native-voice/voice": "^3.2.4",
+    "bcryptjs": "^3.0.3",
+    "chrono-node": "^2.9.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.0.1",
+    "node-cron": "^4.2.1"
+  }
+}
