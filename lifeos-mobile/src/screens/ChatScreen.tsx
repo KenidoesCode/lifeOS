@@ -8,6 +8,8 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  SafeAreaView,
+  ActivityIndicator,
 } from "react-native";
 import { startSpeechToText } from "../services/voice";
 
@@ -18,28 +20,30 @@ const ChatScreen = () => {
 
   const handleSend = async () => {
     if (!input.trim()) {
-      Alert.alert("Say something", "What’s on your mind today?");
+      Alert.alert("Say something", "What's on your mind today?");
       return;
     }
 
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5000/api/ai/memory", {
+      console.log("Sending to AI:", input);
+      const res = await fetch("http://10.0.2.2:5000/api/ai/memory", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: input }),
       });
-
+      console.log("AI response status:", res.status);
       const data = await res.json();
 
       Alert.alert(
-        "I’ve organized this for you",
+        "I've organized this for you",
         `${data.tasks.length} things sorted`
       );
 
       setInput("");
-    } catch {
+    } catch (err) {
+      console.log("AI error:", err.message);
       Alert.alert("Error", "Could not organize this right now");
     } finally {
       setLoading(false);
@@ -59,90 +63,122 @@ const ChatScreen = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.wrapper}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <View style={styles.container}>
-        <Text style={styles.heading}>LifeOS</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={styles.wrapper}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Text style={styles.heading}>LifeOS</Text>
+            <Text style={styles.subtitle}>What's on your mind?</Text>
+          </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="What’s on your mind today?"
-          placeholderTextColor="#999"
-          multiline
-          value={input}
-          onChangeText={setInput}
-        />
+          <TextInput
+            style={styles.input}
+            placeholder="What's on your mind today?"
+            placeholderTextColor="#555555"
+            multiline
+            value={input}
+            onChangeText={setInput}
+          />
 
-        <TouchableOpacity
-          style={styles.voiceButton}
-          onPress={handleVoice}
-        >
-          <Text style={styles.voiceText}>
-            {listening ? "Listening…" : "Speak"}
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.voiceButton}
+            onPress={handleVoice}
+            disabled={listening}
+          >
+            <Text style={styles.voiceIcon}>🎤</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.sendButton}
-          onPress={handleSend}
-          disabled={loading}
-        >
-          <Text style={styles.sendText}>
-            {loading ? "Organizing…" : "Organize my life"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+          <TouchableOpacity
+            style={[styles.sendButton, loading && styles.sendButtonDisabled]}
+            onPress={handleSend}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={styles.sendText}>Organize my life</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#0F0F0F",
+  },
   wrapper: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#0F0F0F",
   },
   container: {
     flex: 1,
-    padding: 24,
+    paddingHorizontal: 20,
     justifyContent: "center",
+  },
+  header: {
+    alignItems: "center",
+    marginBottom: 40,
   },
   heading: {
     fontSize: 32,
-    fontWeight: "600",
-    marginBottom: 24,
-    color: "#111",
+    fontWeight: "700",
+    color: "#F0F0F0",
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#888888",
+    fontWeight: "400",
   },
   input: {
-    fontSize: 18,
-    lineHeight: 26,
-    minHeight: 160,
-    borderColor: "#ddd",
+    fontSize: 16,
+    lineHeight: 24,
+    minHeight: 120,
+    backgroundColor: "#1A1A1A",
+    borderColor: "#2A2A2A",
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
-    marginBottom: 16,
-    color: "#111",
+    marginBottom: 20,
+    color: "#F0F0F0",
+    textAlignVertical: "top",
   },
   voiceButton: {
-    paddingVertical: 14,
-    marginBottom: 12,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#1A1A1A",
+    borderColor: "#2A2A2A",
+    borderWidth: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    alignSelf: "center",
+    marginBottom: 20,
   },
-  voiceText: {
-    fontSize: 16,
-    color: "#555",
+  voiceIcon: {
+    fontSize: 24,
+    color: "#7C5CFC",
   },
   sendButton: {
-    backgroundColor: "#111",
+    backgroundColor: "#7C5CFC",
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 14,
+    alignItems: "center",
+  },
+  sendButtonDisabled: {
+    opacity: 0.6,
   },
   sendText: {
-    color: "#fff",
+    color: "#FFFFFF",
     fontSize: 16,
-    textAlign: "center",
-    fontWeight: "500",
+    fontWeight: "600",
   },
 });
 

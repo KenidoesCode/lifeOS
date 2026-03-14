@@ -22,11 +22,12 @@ router.get("/today", auth, async (req, res) => {
 
 // ---- UPCOMING ----
 router.get("/upcoming", auth, async (req, res) => {
-  const now = new Date();
+  const tomorrow = new Date();
+  tomorrow.setHours(23, 59, 59, 999);
 
   const tasks = await Task.find({
     user: req.user.id,
-    dueAt: { $gt: now },
+    dueAt: { $gt: tomorrow },
     completed: false,
   })
     .sort({ dueAt: 1 })
