@@ -1,11 +1,10 @@
-const express = require("express");
+﻿const express = require("express");
 const router = express.Router();
 const { parseMemory } = require("../ai/memoryParser");
 const Task = require("../models/Task");
+const auth = require("../middleware/auth");
 
-const DEV_USER_ID = "507f1f77bcf86cd799439011";
-
-router.post("/memory", async (req, res) => {
+router.post("/memory", auth, async (req, res) => {
   try {
     const { text } = req.body;
     if (!text) {
@@ -18,12 +17,12 @@ router.post("/memory", async (req, res) => {
       memory.tasks.map((task) =>
         Task.create({
           ...task,
-          user: DEV_USER_ID,
+          user: req.user.id,
         })
       )
     );
 
-    console.log(`Saved ${savedTasks.length} tasks to MongoDB`);
+    console.log("Saved " + savedTasks.length + " tasks for user " + req.user.id);
 
     res.json({
       success: true,

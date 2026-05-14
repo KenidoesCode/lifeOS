@@ -3,6 +3,8 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
 
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'lifeos_secret_2024';
+
 const app = express();
 
 // ---- GLOBAL MIDDLEWARE ----
@@ -15,6 +17,7 @@ app.get("/health", (_, res) => {
 });
 
 // ---- ROUTES ----
+app.use("/api/auth", require("./routes/auth"));
 app.use("/api/tasks", require("./routes/tasks"));
 app.use("/api/ai", require("./routes/ai"));
 app.use("/api/notifications", require("./routes/notifications"));

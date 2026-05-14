@@ -1,208 +1,176 @@
-import React, { useEffect, useState, useCallback, Fragment } from "react";
+import React, { useState, useCallback } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  SafeAreaView,
-  ScrollView,
-} from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
+  View, Text, TouchableOpacity, StyleSheet,
+  FlatList, ActivityIndicator
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
+import { useAuth } from '../context/AuthContext';
 
-type Task = {
+const BASE_URL = 'http://192.168.29.235:5000';
+
+interface Task {
   _id: string;
   title: string;
-  priority: "High" | "Medium" | "Low";
+  priority: 'High' | 'Medium' | 'Low';
+  completed: boolean;
+  dueAt?: string;
+}
+
+const PRIORITY_COLORS = {
+  High: '#EF4444',
+  Medium: '#F59E0B',
+  Low: '#22C55E',
 };
 
 const TodayScreen = () => {
-  const [tasks, setTasks] = useState([] as Task[]);
+  const { token } = useAuth();
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchTodayTasks = async () => {
+  useFocusEffect(
+    useCallback(() => {
+      fetchTasks();
+    }, [])
+  );
+
+  const fetchTasks = async () => {
     try {
-      console.log("Fetching today tasks...");
-      const res = await fetch("http://10.0.2.2:5000/api/tasks/today");
-      console.log("Response status:", res.status);
-      const data: Task[] = await res.json();
-      console.log("Tasks data:", JSON.stringify(data));
-      setTasks(data);
+      setLoading(true);
+      const res = await fetch(`${BASE_URL}/api/tasks/today`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setTasks(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.log("Error fetching tasks:", err.message);
+      setTasks([]);
     } finally {
       setLoading(false);
     }
   };
 
-  useFocusEffect(
-    React.useCallback(() => {
-      fetchTodayTasks();
-    }, [])
-  );
-
   const completeTask = async (id: string) => {
-    await fetch(`http://10.0.2.2:5000/api/tasks/${id}/complete`, {
-      method: "PATCH",
-    });
-    fetchTodayTasks();
+    try {
+      await fetch(`${BASE_URL}/api/tasks/${id}/complete`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      fetchTasks();
+    } catch (err) {}
   };
 
-  if (loading) {
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric'
+  });
+
+  const renderGroup = (priority: 'High' | 'Medium' | 'Low') => {
+    const group = tasks.filter(t => t.priority === priority);
+    if (group.length === 0) return null;
+    const color = PRIORITY_COLORS[priority];
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.center}>
-          <ActivityIndicator color="#7C5CFC" size="large" />
+      <View key={priority} style={styles.group}>
+        <View style={styles.priorityHeader}>
+          <View style={[styles.dot, { backgroundColor: color }]} />
+          <Text style={[styles.priorityLabel, { color }]}>
+            {priority.toUpperCase()}
+          </Text>
         </View>
-      </SafeAreaView>
-    );
-  }
-
-  const renderGroup = (
-    priority: "High" | "Medium" | "Low",
-    color: string,
-    label: string
-  ) => {
-    const group = tasks.filter(
-      (task: Task) => task.priority === priority
-    );
-
-    if (!group.length) return null;
-
-    return (
-      <View key={priority}>
-        <Text style={[styles.group, { color }]}>● {label}</Text>
-
-        {group.map((task: Task) => (
-          <Fragment key={task._id}>
-            <TouchableOpacity
-              style={[styles.task, { borderLeftColor: color }]}
-              onPress={() => completeTask(task._id)}
-            >
-              <View style={styles.checkbox}>
-                <View style={styles.checkboxInner} />
-              </View>
-              <Text style={styles.taskText}>{task.title}</Text>
-            </TouchableOpacity>
-          </Fragment>
+        {group.map(task => (
+          <TouchableOpacity
+            key={task._id}
+            style={[styles.taskCard, { borderLeftColor: color }]}
+            onPress={() => completeTask(task._id)}
+          >
+            <View style={[styles.checkbox, { borderColor: color }]} />
+            <Text style={styles.taskTitle}>{task.title}</Text>
+          </TouchableOpacity>
         ))}
       </View>
     );
   };
 
-  const today = new Date();
-  const dateStr = today.toLocaleDateString('en-US', { 
-    weekday: 'long', 
-    month: 'long', 
-    day: 'numeric' 
-  });
-
-  if (tasks.length === 0) {
+  if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Today</Text>
-            <Text style={styles.date}>{dateStr}</Text>
-          </View>
-          <View style={styles.center}>
-            <Text style={styles.emptyState}>You're all clear!!</Text>
-          </View>
-        </View>
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator
+          size="large"
+          color="#7C3AED"
+          style={{ flex: 1 }}
+        />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Today</Text>
-          <Text style={styles.date}>{dateStr}</Text>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Today</Text>
+        <Text style={styles.date}>{today}</Text>
+      </View>
+
+      {tasks.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyText}>You're all clear!!</Text>
         </View>
-        
-        {renderGroup("High", "#FF6B6B", "HIGH")}
-        {renderGroup("Medium", "#FFB347", "MEDIUM")}
-        {renderGroup("Low", "#6BCB77", "LOW")}
-      </ScrollView>
+      ) : (
+        <FlatList
+          data={['High', 'Medium', 'Low'] as const}
+          keyExtractor={(item) => item}
+          renderItem={({ item }) => renderGroup(item)}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#0F0F0F",
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: 20,
-    backgroundColor: "#0F0F0F",
-  },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  header: {
-    paddingTop: 20,
-    paddingBottom: 24,
-  },
+  container: { flex: 1, backgroundColor: '#000000' },
+  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 20 },
   title: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#F0F0F0",
+    color: '#FFFFFF',
+    fontSize: 34,
+    fontWeight: '800',
+    letterSpacing: -1,
     marginBottom: 4,
   },
-  date: {
-    fontSize: 16,
-    color: "#888888",
-    fontWeight: "400",
+  date: { color: '#666666', fontSize: 14 },
+  list: { paddingHorizontal: 20, paddingBottom: 40 },
+  group: { marginBottom: 24 },
+  priorityHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
   },
-  group: {
-    marginTop: 24,
-    marginBottom: 12,
-    fontSize: 12,
-    fontWeight: "600",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-  },
-  task: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#1A1A1A",
+  dot: { width: 6, height: 6, borderRadius: 3 },
+  priorityLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1 },
+  taskCard: {
+    backgroundColor: '#111111',
+    borderRadius: 12,
     padding: 16,
     marginBottom: 8,
-    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     borderLeftWidth: 3,
+    borderWidth: 1,
+    borderColor: '#1A1A1A',
   },
   checkbox: {
     width: 20,
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: "#2A2A2A",
-    marginRight: 12,
-    justifyContent: "center",
-    alignItems: "center",
   },
-  checkboxInner: {
-    width: 0,
-    height: 0,
-    borderRadius: 5,
-    backgroundColor: "#7C5CFC",
-  },
-  taskText: {
-    flex: 1,
-    fontSize: 15,
-    color: "#F0F0F0",
-    fontWeight: "500",
-  },
+  taskTitle: { color: '#FFFFFF', fontSize: 15, flex: 1 },
   emptyState: {
-    fontSize: 18,
-    color: "#555555",
-    fontWeight: "500",
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  emptyText: { color: '#333333', fontSize: 18, fontWeight: '600' },
 });
 
 export default TodayScreen;
