@@ -1,10 +1,14 @@
 const express = require("express");
 const mongoose = require("mongoose");
+const cors = require("cors");
 require("dotenv").config();
+
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'lifeos_secret_2024';
 
 const app = express();
 
 // ---- GLOBAL MIDDLEWARE ----
+app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 
 // ---- HEALTH CHECK ----
@@ -13,6 +17,7 @@ app.get("/health", (_, res) => {
 });
 
 // ---- ROUTES ----
+app.use("/api/auth", require("./routes/auth"));
 app.use("/api/tasks", require("./routes/tasks"));
 app.use("/api/ai", require("./routes/ai"));
 app.use("/api/notifications", require("./routes/notifications"));
@@ -43,6 +48,6 @@ process.on("uncaughtException", (err) => {
 
 // ---- START SERVER ----
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () =>
+app.listen(PORT, '0.0.0.0', () =>
   console.log(`🚀 LifeOS backend running on port ${PORT}`)
 );

@@ -12,21 +12,25 @@ router.get("/today", auth, async (req, res) => {
   end.setHours(23, 59, 59, 999);
 
   const tasks = await Task.find({
-    user: req.user.id,
-    dueAt: { $gte: start, $lte: end },
-    completed: false,
-  }).sort({ priority: -1, dueAt: 1 });
+  user: req.user.id,
+  $or: [
+    { dueAt: { $gte: start, $lte: end } },
+    { dueAt: null }
+  ],
+  completed: false,
+}).sort({ priority: -1, dueAt: 1 });
 
   res.json(tasks);
 });
 
 // ---- UPCOMING ----
 router.get("/upcoming", auth, async (req, res) => {
-  const now = new Date();
+  const tomorrow = new Date();
+  tomorrow.setHours(23, 59, 59, 999);
 
   const tasks = await Task.find({
     user: req.user.id,
-    dueAt: { $gt: now },
+    dueAt: { $gt: tomorrow },
     completed: false,
   })
     .sort({ dueAt: 1 })
@@ -46,6 +50,44 @@ router.patch("/:id/complete", auth, async (req, res) => {
   if (!task) return res.status(404).json({ error: "Task not found" });
 
   res.json(task);
+});
+
+// ---- STATS ----
+router.get('/stats', auth, async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+    
+    const completedToday = await Task.countDocuments({
+      user: req.user.id,
+      completed: true,
+      updatedAt: { $gte: today, $lte: todayEnd }
+    });
+    const totalCompleted = await Task.countDocuments({
+      user: req.user.id, 
+      completed: true
+    });
+    const totalPending = await Task.countDocuments({
+      user: req.user.id, 
+      completed: false
+    });
+    
+    res.json({ completedToday, totalCompleted, totalPending });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get stats' });
+  }
+});
+
+// ---- CLEAR ALL TASKS ----
+router.delete('/clear', auth, async (req, res) => {
+  try {
+    await Task.deleteMany({ user: req.user.id });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to clear tasks' });
+  }
 });
 
 module.exports = router;

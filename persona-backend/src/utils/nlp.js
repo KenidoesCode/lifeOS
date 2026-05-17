@@ -1,23 +1,34 @@
-function extractTask(text){
-    const task = {
-        title: text,
-        priority: "medium",
-        dueAt: null,
-        remindAt: null,
-    };
+const normalizePriority = (text) => {
+  if (/urgent|asap|important|critical/i.test(text)) return "High";
+  if (/low priority|whenever/i.test(text)) return "Low";
+  return "Medium";
+};
 
-    if (text.includes("urgent") || text.includes("high")) {
-        task.priority = "high";
-    }
+const detectRecurring = (text) => {
+  if (/every day|daily|every morning/i.test(text)) return "daily";
+  if (/every week|weekly/i.test(text)) return "weekly";
+  if (/every month|monthly/i.test(text)) return "monthly";
+  return null;
+};
 
-    if(text.includes("tomorrow")) {
-        const d = new Date();
-        d.setDate(d.getDate() + 1);
-        d.setHours(18,0,0);
-        task.dueAt = d;
-        task.remindAt = new Date(d.getTime() - 30 * 60000);
-}
-    return task;
-}
+const detectType = (text, recurring) => {
+  if (/goal|my goal|aim to|this year|by end of/i.test(text)) return "goal";
+  if (recurring) return "habit";
+  return "task";
+};
 
-module.exports = extractTask;
+const cleanTitle = (text) =>
+  text
+    .replace(
+      /(tomorrow|today|tonight|next week|next month|urgent|asap|important|every day|daily|every week|weekly|every month|monthly|goal|my goal is|this year|by end of)/gi,
+      ""
+    )
+    .replace(/\s+/g, " ")
+    .trim();
+
+module.exports = {
+  normalizePriority,
+  detectRecurring,
+  detectType,
+  cleanTitle,
+};

@@ -1,19 +1,13 @@
-const cron = require("node-cron");
-const Task = require("../models/Task");
+const fetch = require("node-fetch");
 
-cron.schedule("*/5 * * * *", async () => {
-    const now = new Date();
+async function sendPushNotification(pushToken, title, body) {
+  if (!pushToken) return;
 
-    const tasks = await Task.find({
-        remindAt: {$lte: now },
-        notified: false,
-        completed: false,
-    });
+  await fetch("https://exp.host/--/api/v2/push/send", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ to: pushToken, title, body }),
+  });
+}
 
-    for (let task of tasks) {
-        console.log("🔔REMINDER:",task.title);
-
-        task.notified = true;
-        await task.save();
-    }
-});
+module.exports = { sendPushNotification };

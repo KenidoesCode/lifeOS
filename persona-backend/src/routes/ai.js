@@ -1,9 +1,10 @@
-const express = require("express");
+﻿const express = require("express");
 const router = express.Router();
 const { parseMemory } = require("../ai/memoryParser");
+const Task = require("../models/Task");
 const auth = require("../middleware/auth");
 
-router.post("/memory", async (req, res) => {
+router.post("/memory", auth, async (req, res) => {
   try {
     const { text } = req.body;
     if (!text) {
@@ -12,9 +13,20 @@ router.post("/memory", async (req, res) => {
 
     const memory = await parseMemory(text);
 
+    const savedTasks = await Promise.all(
+      memory.tasks.map((task) =>
+        Task.create({
+          ...task,
+          user: req.user.id,
+        })
+      )
+    );
+
+    console.log("Saved " + savedTasks.length + " tasks for user " + req.user.id);
+
     res.json({
       success: true,
-      tasks: memory.tasks,
+      tasks: savedTasks,
     });
   } catch (err) {
     console.error("AI error:", err.message);
